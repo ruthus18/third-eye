@@ -1,6 +1,6 @@
 import contextlib
 import datetime as dt
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 import httpx
 import pytz
@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     TINKOFF_TOKEN: SecretStr = SecretStr('')
 
     TZ_NAME: str = 'Asia/Yekaterinburg'
-    TIMEZONE: dt.tzinfo = None
+    TIMEZONE: Optional[dt.tzinfo] = None
 
     class Config:
         env_file = '.env'

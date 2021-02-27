@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+green='\033[0;32m'
+no_color='\033[0m'
+
+echo -e "${green}[1/3] isort${no_color}\n"
+isort --check-only -q . || {
+    isort . && exit 1
+}
+
+echo -e "${green}[2/3] flake8${no_color}\n"
+flake8 .
+
+echo -e "${green}[3/3] mypy${no_color}\n"
+mypy .
