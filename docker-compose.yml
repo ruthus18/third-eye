@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:12
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_DB: 'third_eye'
+      POSTGRES_USER: 'third_eye'
+      POSTGRES_PASSWORD: 'third_eye'

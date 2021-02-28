@@ -8,8 +8,12 @@ authors = ["ruthus18 <ruthus18@gmail.com>"]
 python = "^3.9"
 httpx = "^0.16.1"
 APScheduler = "^3.7.0"
-pytz = "^2021.1"
+pytz = "^2020.4"
 pydantic = {version = "^1.8", extras = ["dotenv"]}
+tortoise-orm = "^0.16.21"
+aerich = "^0.5.0"
+aiocron = "^1.4"
+asyncpg = "^0.22.0"
 
 [tool.poetry.dev-dependencies]
 ipython = "^7.20.0"

@@ -1,13 +1,17 @@
 import asyncio
+import datetime as dt
 import logging
 from typing import Any, Dict, List, Literal, Optional
 
 import httpx
 
 from .config import settings
-from .schema import Instrument
+from .schema import BalanceItem, Candle, CandleInterval, Instrument
 
 logger = logging.getLogger(__name__)
+
+
+USD_FIGI = 'BBG0013HGFT4'
 
 
 class TinkoffAPIError(Exception):
@@ -57,18 +61,33 @@ class TinkoffClient:
             await asyncio.sleep(60)
             return await self._request(method, endpoint, json_data, params, retries_on_ratelimit - 1)
 
-        try:
-            response.raise_for_status()
-        except httpx.HTTPStatusError as e:
-            raise TinkoffAPIError(str(e))
+        response_data = response.json()
+        payload: Dict[str, Any] = response_data['payload']
 
-        response_data: Dict[str, Any] = response.json()['payload']
         if response_data['status'] == 'Error':
-            payload = response_data['payload']
-
             raise TinkoffAPIError(f"{payload['code']}: {payload['message']}")
 
-        return response_data
+        return payload
+
+    async def get_balance(self) -> List[BalanceItem]:
+        portfolio_data = await self._request('GET', 'portfolio/currencies')
+        return [BalanceItem(**obj) for obj in portfolio_data['currencies']]
+
+    # async def get_portfolio(self) -> List[PortfolioItem]:
+    #     portfolio_data = await self._request('GET', 'portfolio')
+    #     return [
+    #         PortfolioItem(
+    #             instrument=Instrument(
+    #                 name=item['name'],
+    #                 ticker=item['ticker'],
+    #                 figi=item['figi'],
+    #                 currency=item['averagePositionPrice']['currency']
+    #             ),
+    #             lots=item['lots'],
+    #         )
+    #         for item in portfolio_data['positions']
+    #         if item['figi'] != USD_FIGI
+    #     ]
 
     async def _get_instruments(self, kind: Literal['stocks', 'bonds', 'currencies']) -> List[Instrument]:
         response = await self._request('GET', f'market/{kind}')
@@ -85,3 +104,22 @@ class TinkoffClient:
 
     async def get_currencies(self) -> List[Instrument]:
         return await self._get_instruments('currencies')
+
+    async def get_candles(
+        self, figi: str, interval: CandleInterval, start_dt: dt.datetime, end_dt: dt.datetime
+    ) -> List[Candle]:
+        """Get historic candles for selected instrument, period and interval.
+        """
+        def make_tz_aware(local_dt: dt.datetime) -> Any:
+            if not settings.TIMEZONE:
+                raise RuntimeError('Timezone not specified')
+
+            return settings.TIMEZONE.localize(local_dt).isoformat()
+
+        response = await self._request('GET', 'market/candles', params={
+            'figi': figi,
+            'from': make_tz_aware(start_dt),
+            'to': make_tz_aware(end_dt),
+            'interval': interval
+        })
+        return [Candle(**obj) for obj in response['candles']]
