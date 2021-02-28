@@ -1,9 +1,13 @@
 import argparse
 import asyncio
+import logging
 import logging.config
 
 from . import sync
 from .config import settings
+
+logger = logging.getLogger(__name__)
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -13,4 +17,4 @@ if __name__ == '__main__':
     logging.config.dictConfig(settings.LOGGING)
 
     if args.command == 'sync':
-        asyncio.run(sync.main())
+        asyncio.run(sync.run_scheduler())  # type: ignore

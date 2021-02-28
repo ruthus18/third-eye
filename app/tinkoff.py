@@ -110,11 +110,8 @@ class TinkoffClient:
     ) -> List[Candle]:
         """Get historic candles for selected instrument, period and interval.
         """
-        def make_tz_aware(local_dt: dt.datetime) -> Any:
-            if not settings.TIMEZONE:
-                raise RuntimeError('Timezone not specified')
-
-            return settings.TIMEZONE.localize(local_dt).isoformat()
+        def make_tz_aware(local_dt: dt.datetime) -> str:
+            return settings.TIMEZONE.localize(local_dt).isoformat()  # type: ignore
 
         response = await self._request('GET', 'market/candles', params={
             'figi': figi,

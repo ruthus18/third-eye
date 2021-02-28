@@ -10,6 +10,10 @@ async def init_db() -> None:
     await Tortoise.init(settings.TORTOISE_ORM)
 
 
+async def close_db() -> None:
+    await Tortoise.close_connections()
+
+
 async def db_size() -> str:
     conn = Tortoise.get_connection("default")
     _, result = await conn.execute_query(

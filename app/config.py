@@ -1,4 +1,3 @@
-import contextlib
 import logging
 from typing import Any, Dict, Literal, Optional
 
@@ -78,8 +77,10 @@ class Settings(BaseSettings):
             },
         })
 
-        with contextlib.suppress(pytz.UnknownTimeZoneError):
-            values['TIMEZONE'] = pytz.timezone(values['TZ_NAME'])
+        if not values['TZ_NAME']:
+            raise RuntimeError('Timezone name not specified')
+
+        values['TIMEZONE'] = pytz.timezone(values['TZ_NAME'])
 
         return values
 
