@@ -111,6 +111,9 @@ class TinkoffClient:
         """Get historic candles for selected instrument, period and interval.
         """
         def make_tz_aware(local_dt: dt.datetime) -> str:
+            if local_dt.tzinfo:
+                return local_dt.isoformat()
+
             return settings.TIMEZONE.localize(local_dt).isoformat()  # type: ignore
 
         response = await self._request('GET', 'market/candles', params={

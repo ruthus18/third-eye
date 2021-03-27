@@ -21,6 +21,9 @@ class Currency(str, Enum):
     RUB = 'RUB'
     EUR = 'EUR'
 
+    def __str__(self) -> str:
+        return self.value
+
 
 class Instrument(Entity):
     figi: str
@@ -45,6 +48,9 @@ class CandleInterval(str, Enum):
     D1 = 'day'
     D7 = 'week'
     D30 = 'month'
+
+    def __str__(self) -> str:
+        return self.value
 
 
 class Candle(Entity):

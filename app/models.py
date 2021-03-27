@@ -1,4 +1,5 @@
 from enum import Enum
+from typing import Any, Dict, Sequence
 
 from tortoise import Tortoise, fields, models
 
@@ -14,11 +15,16 @@ async def close_db() -> None:
     await Tortoise.close_connections()
 
 
-async def db_size() -> str:
+async def db_query(sql: str) -> Sequence[Dict[Any, Any]]:
     conn = Tortoise.get_connection("default")
-    _, result = await conn.execute_query(
-        f"SELECT pg_database_size('{settings.DB_NAME}')/1024 AS kb_size;"
-    )
+    _, result = await conn.execute_query(sql)
+
+    return result
+
+
+async def db_size() -> str:
+    result = await db_query(f"SELECT pg_database_size('{settings.DB_NAME}')/1024 AS kb_size;")
+
     size_mb = result[0].get('kb_size') / 1024  # type: ignore
     return f'{size_mb:.3f} MB'
 
@@ -38,8 +44,9 @@ class Instrument(models.Model):
     currency = fields.CharEnumField(Currency, default=Currency.USD)
     price_increment = fields.DecimalField(max_digits=5, decimal_places=2)
 
-    imported_at = fields.DatetimeField(auto_now_add=True)
-    deleted_at = fields.DatetimeField(null=True)
+    emerged_at = fields.DateField(null=True)
+    delisted_at = fields.DateField(null=True)
+    deleted_at = fields.DateField(null=True)
 
     def __str__(self) -> str:
         return f'[{self.ticker}] {self.name}'
@@ -59,7 +66,6 @@ class Candle(models.Model):
     volume = fields.IntField(max_digits=8, decimal_places=2)
 
     class Meta:
-        indexes = (('instrument', 'interval', 'time'), )
         unique_together = (('instrument', 'interval', 'time'), )
 
     def __str__(self) -> str:

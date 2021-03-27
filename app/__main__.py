@@ -17,4 +17,4 @@ if __name__ == '__main__':
     logging.config.dictConfig(settings.LOGGING)
 
     if args.command == 'sync':
-        asyncio.run(sync.run_scheduler())  # type: ignore
+        asyncio.run(sync.run_scheduler())
