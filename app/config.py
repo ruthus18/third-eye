@@ -8,6 +8,8 @@ from pytz.tzinfo import DstTzInfo
 
 
 class Settings(BaseSettings):
+    ENVIRONMENT: Literal['local', 'prod'] = 'local'
+
     TINKOFF_HTTP_URL: httpx.URL = httpx.URL('https://api-invest.tinkoff.ru/openapi/')
     TINKOFF_WS_URL: AnyUrl = Field('wss://api-invest.tinkoff.ru/openapi/md/v1/md-openapi/ws')
     TINKOFF_TOKEN: SecretStr = SecretStr('')
@@ -24,6 +26,7 @@ class Settings(BaseSettings):
     TIMEZONE: Optional[DstTzInfo] = None
 
     LOGGING_LEVEL: Literal['DEBUG', 'INFO', 'ERROR'] = Field('INFO')
+    LOGGING_FORMAT: str = '[%(asctime)s] %(levelname)s %(name)s: %(message)s'
     LOGGING: Dict[str, Any] = {}
 
     @root_validator
@@ -56,7 +59,7 @@ class Settings(BaseSettings):
             'disable_existing_loggers': False,
             'formatters': {
                 'default': {
-                    'format': '[%(asctime)s] %(levelname)s %(name)s: %(message)s',
+                    'format': values['LOGGING_FORMAT'],
                 },
             },
             'handlers': {
@@ -73,7 +76,7 @@ class Settings(BaseSettings):
                 },
                 'tortoise': {
                     'level': logging.ERROR,
-                }
+                },
             },
         })
 
