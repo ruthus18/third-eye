@@ -1,8 +1,7 @@
-import logging.config
+import streamlit as st
 
-from app.config import settings
 from app.dashboard import main  # type: ignore
 
-logging.config.dictConfig(settings.LOGGING)
+st.set_page_config(page_title='Trading Dashboard', page_icon='💰', layout="wide")
 
 main()

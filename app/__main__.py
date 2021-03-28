@@ -21,16 +21,17 @@ if __name__ == '__main__':
         asyncio.run(sync.run_scheduler())
 
     elif args.command == 'dashboard':
+        cmd = 'streamlit run run_dashboard.py'
+
         streamlit_args = [
-            'streamlit run run_dashboard.py',
             '--global.sharingMode off',
             '--server.port 8000',
             f'--logger.messageFormat "{settings.LOGGING_FORMAT}"',
         ]
 
         if settings.ENVIRONMENT == 'prod':
-            streamlit_args.append('--server.headless true')
             streamlit_args.append('--global.disableWatchdogWarning true')
-            streamlit_args.append('--global.fileWatcherType none')
+            streamlit_args.append('--server.headless true')
+            streamlit_args.append('--server.fileWatcherType none')
 
-        os.system(' '.join(streamlit_args))
+        os.system(' '.join([cmd, *streamlit_args]))
