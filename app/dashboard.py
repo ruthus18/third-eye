@@ -4,11 +4,11 @@ import datetime as dt
 import logging
 from enum import Enum
 
+import plotly.graph_objects as go
 import streamlit as st
 
-from . import models, schema
+from . import graphs, models, schema
 from .config import settings
-from .graphs import get_candles_graph
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +49,7 @@ def stocks_viewer():
         return {ticker: name for ticker, name in stocks}
 
     @st.cache(allow_output_mutation=True)
-    def draw_candles_graph(ticker: str):
+    def get_candles_graph(ticker: str):
         candles_data = _await(
             models.Candle.filter(
                 instrument__ticker=ticker,
@@ -57,7 +57,11 @@ def stocks_viewer():
                 interval=schema.CandleInterval.D1,
             ).values()
         )
-        return get_candles_graph(ticker, candles_data)
+        return graphs.get_candles_graph(ticker, candles_data)
+
+    @st.cache
+    def update_graph_hover(graph: go.Figure, show_hover: bool):
+        graphs.update_graph_hover(graph, show_hover)
 
     def format_selectbox(ticker: str):
         if ticker == EMPTY_CHOICE:
@@ -72,8 +76,12 @@ def stocks_viewer():
         [EMPTY_CHOICE, *stocks.keys()],
         format_func=format_selectbox
     )
+    show_hover = st.sidebar.checkbox('Show Hover', value=False)
+
     if ticker != EMPTY_CHOICE:
-        graph = draw_candles_graph(ticker)
+        graph = get_candles_graph(ticker)
+        update_graph_hover(graph, show_hover)
+
         st.plotly_chart(graph, use_container_width=True, config={'displayModeBar': False})
 
 

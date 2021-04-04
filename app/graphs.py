@@ -5,7 +5,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
 
-def get_candles_graph(ticker: str, candles_data: List[Dict[str, Any]]) -> go.Figure:
+def get_candles_graph(ticker: str, candles_data: List[Dict[str, Any]], show_hover: bool = False) -> go.Figure:
     df = pd.DataFrame.from_dict(candles_data)
     fig = make_subplots(rows=2, cols=1, row_heights=[0.8, 0.15], vertical_spacing=0.05)
 
@@ -31,7 +31,6 @@ def get_candles_graph(ticker: str, candles_data: List[Dict[str, Any]]) -> go.Fig
             y=df.volume,
             marker_color='#7658e0',
             name='Volume',
-            hovertemplate=[]
         ),
         row=2, col=1,
     )
@@ -57,7 +56,10 @@ def get_candles_graph(ticker: str, candles_data: List[Dict[str, Any]]) -> go.Fig
     }
     fig.update_yaxes(**axes_config)
     fig.update_xaxes(rangeslider_visible=False, **axes_config)
-    fig.update_layout(hoverdistance=0)
 
-    fig.update_traces(xaxis='x', hoverinfo='none')
+    fig.update_traces(xaxis='x', hoverinfo='x+y')
     return fig
+
+
+def update_graph_hover(graph: go.Figure, show_hover: bool) -> None:
+    graph.update_layout(hoverdistance=1 if show_hover else 0)
