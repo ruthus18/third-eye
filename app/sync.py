@@ -79,6 +79,7 @@ async def init_day_candles(client: TinkoffClient) -> None:
         await models.Candle.bulk_create(candle_instances)
         logger.info('Uploaded %s candles for %s', len(candle_instances), ticker)
 
+    # TODO: Fix counter when nothing to update
     logger.info('Day candles initialized for %s stocks', len(instruments_to_upd))
 
 
@@ -109,11 +110,10 @@ async def update_stocks_delisting_date(client: TinkoffClient) -> None:
         HAVING max(candle.time) < now() - '14 days' :: interval
             OR max(candle.time) IS NULl;
     '''
-    today = tz.now().date()
     instruments_to_upd = await models.db_query(sql)
     for figi, last_candle_time in instruments_to_upd:
 
-        await models.Instrument.get(figi=figi).update(delisted_at=today)  # type: ignore
+        await models.Instrument.get(figi=figi).update(delisted_at=last_candle_time)  # type: ignore
 
     logger.info('Set stock delisting date for %s stocks', len(instruments_to_upd))
 
@@ -129,7 +129,7 @@ async def update_day_candles(client: TinkoffClient) -> None:
         type=models.InstrumentType.STOCK,
         deleted_at__isnull=True,
         delisted_at__isnull=True,
-    )
+    ).order_by('ticker')
     now = tz.now()
 
     for stock in stocks:

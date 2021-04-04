@@ -1,21 +1,21 @@
-from typing import Any, Dict, List
+from typing import Any, List
 
+import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
 
-def get_candles_graph(ticker: str, candles_data: List[Dict[str, Any]], show_hover: bool = False) -> go.Figure:
-    df = pd.DataFrame.from_dict(candles_data)
+def get_candles_graph(ticker: str, candles: pd.DataFrame) -> go.Figure:
     fig = make_subplots(rows=2, cols=1, row_heights=[0.8, 0.15], vertical_spacing=0.05)
 
     fig.add_trace(
         go.Candlestick(
-            x=df.time,
-            open=df.open,
-            high=df.high,
-            low=df.low,
-            close=df.close,
+            x=candles.time,
+            open=candles.open,
+            high=candles.high,
+            low=candles.low,
+            close=candles.close,
             name=ticker,
             increasing_line_color='#2d9462',
             increasing_fillcolor='#2d9462',
@@ -26,9 +26,9 @@ def get_candles_graph(ticker: str, candles_data: List[Dict[str, Any]], show_hove
         row=1, col=1,
     )
     fig.add_trace(
-        go.Scatter(
-            x=df.time,
-            y=df.volume,
+        go.Bar(
+            x=candles.time,
+            y=candles.volume,
             marker_color='#7658e0',
             name='Volume',
         ),
@@ -38,9 +38,9 @@ def get_candles_graph(ticker: str, candles_data: List[Dict[str, Any]], show_hove
         {'plot_bgcolor': '#ffffff', 'paper_bgcolor': '#ffffff', 'legend_orientation': "h"},
         legend=dict(y=1, x=0),
         height=700,
-        dragmode='pan',
         hovermode='x unified',
-        margin=dict(b=20, t=0, l=0, r=40)
+        margin=dict(b=20, t=0, l=0, r=40),
+        bargap=0.1,
     )
 
     axes_config = {
@@ -63,3 +63,30 @@ def get_candles_graph(ticker: str, candles_data: List[Dict[str, Any]], show_hove
 
 def update_graph_hover(graph: go.Figure, show_hover: bool) -> None:
     graph.update_layout(hoverdistance=1 if show_hover else 0)
+
+
+# FIXME: Draft
+def calculate_support_resistance_levels(candles: pd.DataFrame) -> List[Any]:
+
+    levels: List[Any] = []
+    volatility = np.mean(candles.high - candles.low)
+
+    def is_support_level(i: int) -> bool:
+        c1, c2, c3, c4, c5 = candles.low[i-2:i+2+1]
+        return c1 > c2 > c3 < c4 < c5  # type: ignore
+
+    def is_resistance_level(i: int) -> bool:
+        c1, c2, c3, c4, c5 = candles.high[i-2:i+2+1]
+        return c1 < c2 < c3 > c4 > c5  # type: ignore
+
+    def is_duplicated_level(level: Any) -> bool:
+        return np.sum([abs(level - other_level) < volatility for _, other_level in levels]) > 0  # type: ignore
+
+    for i in range(2, len(candles) - 2):
+        if is_support_level(i) and not is_duplicated_level(candles.low[i]):
+            levels.append((candles.time[i], candles.low[i]))
+
+        elif is_resistance_level(i) and not is_duplicated_level(candles.high[i]):
+            levels.append((candles.time[i], candles.high[i]))
+
+    return levels
