@@ -66,3 +66,7 @@ def update_graph_hover(graph: go.Figure, show_hover: bool) -> None:
 
 def draw_line(graph: go.Figure, x0: Any, y0: Any, x1: Any, y1: Any, opacity: float) -> None:
     graph.add_shape(type='line', x0=x0, y0=y0, x1=x1, y1=y1, line_color='#7658e0', opacity=opacity)
+
+
+def draw_vline(graph: go.Figure, x: Any, width: int = 1, opacity: float = 1) -> None:
+    graph.add_vline(x=x, line_color='#7658e0', line_width=width, opacity=opacity)
