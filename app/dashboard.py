@@ -3,6 +3,7 @@ import asyncio
 import datetime as dt
 import logging
 from enum import Enum
+from typing import Optional
 
 import pandas as pd
 import plotly.graph_objects as go
@@ -37,6 +38,7 @@ def init():
     logger.info('DB initialized')
 
 
+# TODO: Refactor as class
 def stocks_viewer():
 
     @st.cache
@@ -50,7 +52,13 @@ def stocks_viewer():
         return {ticker: name for ticker, name in stocks}
 
     @st.cache(allow_output_mutation=True)
-    def get_candles_graph(ticker: str, start_time: dt.date, end_time: dt.date, support_resistance: bool = False):
+    def get_candles_graph(
+        ticker: str,
+        start_time: dt.date,
+        end_time: dt.date,
+        sr_start_time: Optional[dt.date] = None,
+        sr_end_time: Optional[dt.date] = None,
+    ):
         candles_data = _await(
             models.Candle.filter(
                 instrument__ticker=ticker,
@@ -59,7 +67,10 @@ def stocks_viewer():
                 interval=schema.CandleInterval.D1,
             ).values()
         )
-        return graphs.get_candles_graph(ticker, pd.DataFrame.from_dict(candles_data))
+        graph = graphs.get_candles_graph(ticker, pd.DataFrame.from_dict(candles_data))
+
+        # TODO: Support/Resistance Levels
+        return graph
 
     @st.cache
     def update_graph_hover(graph: go.Figure, show_hover: bool):
@@ -73,6 +84,7 @@ def stocks_viewer():
 
     stocks = get_stocks_data()
 
+    st.sidebar.text('Candles')
     ticker = st.sidebar.selectbox(
         'Ticker',
         [EMPTY_CHOICE, *stocks.keys()],
@@ -82,6 +94,13 @@ def stocks_viewer():
     end_time = st.sidebar.date_input('End Time', value=dt.date.today())
 
     show_hover = st.sidebar.checkbox('Show Hover', value=False)
+
+    st.sidebar.markdown('---')
+    st.sidebar.text('Support/Resistance Levels')
+    sup_res = st.sidebar.checkbox('Show Levels', value=False)  # noqa: F841
+
+    sup_res_start_time = st.sidebar.date_input('S/R Start Time', value=start_time)  # noqa: F841
+    sup_end_end_time = st.sidebar.date_input('S/R End Time', value=end_time)  # noqa: F841
 
     if ticker != EMPTY_CHOICE:
         graph = get_candles_graph(ticker, start_time, end_time)
