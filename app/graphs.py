@@ -1,6 +1,5 @@
-from typing import Any, List
+from typing import Any
 
-import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
@@ -65,28 +64,5 @@ def update_graph_hover(graph: go.Figure, show_hover: bool) -> None:
     graph.update_layout(hoverdistance=1 if show_hover else 0)
 
 
-# FIXME: Draft
-def calculate_support_resistance_levels(candles: pd.DataFrame) -> List[Any]:
-
-    levels: List[Any] = []
-    volatility = np.mean(candles.high - candles.low)
-
-    def is_support_level(i: int) -> bool:
-        c1, c2, c3, c4, c5 = candles.low[i-2:i+2+1]
-        return c1 > c2 > c3 < c4 < c5  # type: ignore
-
-    def is_resistance_level(i: int) -> bool:
-        c1, c2, c3, c4, c5 = candles.high[i-2:i+2+1]
-        return c1 < c2 < c3 > c4 > c5  # type: ignore
-
-    def is_duplicated_level(level: Any) -> bool:
-        return np.sum([abs(level - other_level) < volatility for _, other_level in levels]) > 0  # type: ignore
-
-    for i in range(2, len(candles) - 2):
-        if is_support_level(i) and not is_duplicated_level(candles.low[i]):
-            levels.append((candles.time[i], candles.low[i]))
-
-        elif is_resistance_level(i) and not is_duplicated_level(candles.high[i]):
-            levels.append((candles.time[i], candles.high[i]))
-
-    return levels
+def draw_line(graph: go.Figure, x0: Any, y0: Any, x1: Any, y1: Any, opacity: float) -> None:
+    graph.add_shape(type='line', x0=x0, y0=y0, x1=x1, y1=y1, line_color='#7658e0', opacity=opacity)

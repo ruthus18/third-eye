@@ -1343,6 +1343,18 @@ validators = "*"
 watchdog = {version = "*", markers = "platform_system != \"Darwin\""}
 
 [[package]]
+name = "ta"
+version = "0.7.0"
+description = "Technical Analysis Library in Python"
+category = "main"
+optional = false
+python-versions = "*"
+
+[package.dependencies]
+numpy = "*"
+pandas = "*"
+
+[[package]]
 name = "terminado"
 version = "0.9.3"
 description = "Tornado websocket backend for the Xterm.js Javascript terminal emulator library."
@@ -1507,7 +1519,7 @@ notebook = ">=4.4.1"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9"
-content-hash = "6cba7e93e68c2ac856b6b3aff3e6c59474808ff979277b6d92a6e859ed7c6532"
+content-hash = "b907648727a374eeac4f5463ba2d6efc1b198822746a2378347f97434562c89f"
 
 [metadata.files]
 aerich = [
@@ -2199,6 +2211,9 @@ sniffio = [
 streamlit = [
     {file = "streamlit-0.79.0-py2.py3-none-any.whl", hash = "sha256:35c2c901b5fee15174a0cc03e465e9b13a10f8f411d925c2ca9dd012bdc8ab20"},
     {file = "streamlit-0.79.0.tar.gz", hash = "sha256:8532aad5a05af08dd48e955fa64bc9fe9e3fb99a4c95514215a597ba56e05121"},
+]
+ta = [
+    {file = "ta-0.7.0.tar.gz", hash = "sha256:41b108d526ff426619d18c15ffa0d1b545a281168bf0d06f32194ae7de3acacb"},
 ]
 terminado = [
     {file = "terminado-0.9.3-py3-none-any.whl", hash = "sha256:430e876ec9d4d93a4fd8a49e82dcfae0c25f846540d0c5ca774b397533e237e8"},
