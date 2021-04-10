@@ -12,13 +12,16 @@ logger = logging.getLogger(__name__)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('command', choices=['sync', 'dashboard'])
+    parser.add_argument('command', choices=['sync', 'sync_manual', 'dashboard'])
     args = parser.parse_args()
 
     logging.config.dictConfig(settings.LOGGING)
 
     if args.command == 'sync':
         asyncio.run(sync.run_scheduler())
+
+    elif args.command == 'sync_manual':
+        asyncio.run(sync.main())
 
     elif args.command == 'dashboard':
         cmd = 'streamlit run run_dashboard.py'

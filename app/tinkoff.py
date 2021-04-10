@@ -7,6 +7,7 @@ import httpx
 
 from .config import settings
 from .schema import BalanceItem, Candle, CandleInterval, Instrument
+from .utils import localize_dt
 
 logger = logging.getLogger(__name__)
 
@@ -110,11 +111,11 @@ class TinkoffClient:
     ) -> List[Candle]:
         """Get historic candles for selected instrument, period and interval.
         """
-        def make_tz_aware(local_dt: dt.datetime) -> str:
-            if local_dt.tzinfo:
-                return local_dt.isoformat()
+        def make_tz_aware(datetime: dt.datetime) -> str:
+            if datetime.tzinfo:
+                return datetime.isoformat()
 
-            return settings.TIMEZONE.localize(local_dt).isoformat()  # type: ignore
+            return localize_dt(datetime).isoformat()
 
         response = await self._request('GET', 'market/candles', params={
             'figi': figi,
