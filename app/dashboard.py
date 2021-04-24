@@ -9,6 +9,9 @@ from typing import Optional
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
+from cachetools.func import ttl_cache
+
+from app.tinkoff import TinkoffClient
 
 from . import graphs, models, schema
 from .support_resistance import SupportResistanceSearch
@@ -19,6 +22,9 @@ logger = logging.getLogger(__name__)
 EMPTY_CHOICE = '-----'
 
 loop: asyncio.AbstractEventLoop = asyncio.new_event_loop()
+
+
+tinkoff_client = TinkoffClient()
 
 
 def _await(coro):
@@ -100,53 +106,72 @@ class StocksViewerPage(Page):
         return f"{ticker} ({self.stocks_choices[ticker]})"
 
     @staticmethod
+    @ttl_cache(ttl=600)
+    def get_candles_df(
+        ticker: str,
+        start_date: dt.date,
+        end_date: dt.date,
+        timeframe: schema.CandleInterval,
+    ):
+        stock = _await(models.Instrument.get(ticker=ticker))
+        start_dt = localize_dt(dt.datetime.combine(start_date, dt.time()))
+        end_dt = localize_dt(dt.datetime.combine(end_date, dt.time(23, 59)))
+
+        if timeframe == schema.CandleInterval.D1:
+            candles_data = _await(
+                models.Candle.filter(
+                    instrument=stock,
+                    interval=schema.CandleInterval.D1,
+                )
+                .filter(time__gte=start_dt, time__lte=end_dt)
+                .values('open', 'close', 'high', 'low', 'volume', 'time')
+            )
+
+        else:
+            candles_data = _await(tinkoff_client.get_candles(
+                figi=stock.figi, interval=timeframe, start_dt=start_dt, end_dt=end_dt
+            ))
+            candles_data = (o.dict() for o in candles_data)
+
+        return pd.DataFrame.from_dict(candles_data)
+
+    @classmethod
     @st.cache(allow_output_mutation=True)
     def get_candles_graph(
+        cls,
         ticker: str,
         candle_start_date: dt.date,
         candle_end_date: dt.date,
+        candle_timeframe: schema.CandleInterval,
         sr_start_date: Optional[dt.date] = None,
         sr_end_date: Optional[dt.date] = None,
         sr_significance_threshold: Optional[float] = None,
     ):
-        candles_qs = models.Candle.filter(
-            instrument__ticker=ticker,
-            interval=schema.CandleInterval.D1,
-        )
-        values = ('open', 'close', 'high', 'low', 'volume', 'time')
-
-        candles_df = pd.DataFrame.from_dict(_await(
-            candles_qs
-            .filter(
-                time__gte=localize_dt(dt.datetime.combine(candle_start_date, dt.time())),
-                time__lte=localize_dt(dt.datetime.combine(candle_end_date, dt.time(23, 59))),
-            )
-            .values(*values)
-        ))
+        candles_df = cls.get_candles_df(ticker, candle_start_date, candle_end_date, candle_timeframe)
         graph = graphs.get_candles_graph(ticker, candles_df)
 
         if sr_start_date and sr_end_date:
             sr_candles_df = pd.DataFrame.from_dict(_await(
-                candles_qs
+                models.Candle.filter(
+                    instrument__ticker=ticker,
+                    interval=schema.CandleInterval.D1,
+                )
                 .filter(
                     time__gte=localize_dt(dt.datetime.combine(sr_start_date, dt.time())),
                     time__lte=localize_dt(dt.datetime.combine(sr_end_date, dt.time(23, 59))),
                 )
-                .values(*values)
+                .values('open', 'close', 'high', 'low', 'volume', 'time')
             ))
             sr_levels = SupportResistanceSearch(sr_candles_df).find_levels(Decimal(sr_significance_threshold))
             for _, level in sr_levels.iterrows():
                 graphs.draw_line(
                     graph=graph,
-                    x0=level['time'],
+                    x0=min(candles_df.time),
                     x1=max(candles_df.time),
                     y0=level['price'],
                     y1=level['price'],
                     opacity=level['significance']
                 )
-
-            if sr_end_date != candle_end_date:
-                graphs.draw_vline(graph=graph, x=sr_end_date, width=3, opacity=0.2)
 
         return graph
 
@@ -165,12 +190,18 @@ class StocksViewerPage(Page):
 
         self.candle_start_date = st.sidebar.date_input('Start Date', value=self.default_candle_start_date)
         self.candle_end_date = st.sidebar.date_input('End Date', value=self.default_candle_end_date)
+        self.candle_timeframe = st.sidebar.selectbox(
+            'Timeframe',
+            list(ch.value for ch in schema.CandleInterval),
+            list(ch.value for ch in schema.CandleInterval).index('day')
+        )
 
         self.show_hover = st.sidebar.checkbox('Show Hover', value=False)
 
         st.sidebar.markdown('---')
         st.sidebar.text('Support/Resistance Levels')
         self.show_sr_levels = st.sidebar.checkbox('Show Levels', value=False)
+        self.sr_start_date = st.sidebar.date_input('S/R Start Date', value=self.default_sr_start_date)
         self.sr_end_date = st.sidebar.date_input('S/R End Date', value=self.default_sr_end_date)
         self.sr_significance_threshold = st.sidebar.number_input('Significnce Threshold', value=0.25)
 
@@ -183,12 +214,13 @@ class StocksViewerPage(Page):
             candle_kwargs = {
                 'ticker': self.ticker,
                 'candle_start_date': self.candle_start_date,
-                'candle_end_date': self.candle_end_date
+                'candle_end_date': self.candle_end_date,
+                'candle_timeframe': self.candle_timeframe,
             }
             if self.show_sr_levels:
                 candle_kwargs = {
                     **candle_kwargs,
-                    'sr_start_date': self.candle_start_date,
+                    'sr_start_date': self.sr_start_date,
                     'sr_end_date': self.sr_end_date,
                     'sr_significance_threshold': self.sr_significance_threshold
                 }
