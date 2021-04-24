@@ -25,7 +25,7 @@ class SupportResistanceSearch:
             * min_size_of_batch: Минимальный размер batch-а для разделения DataFrame-а со свечами
             * recent_level_rate: Множитель для установки приоритета новых уровней перед старыми
 
-        Параметры по умолчанию подобраны для наиболее точного поиска уровней на дневке (CandleInterval=D1)
+        Параметры по умолчанию подобраны для наиболее точного поиска уровней на дневке (Timeframe=D1)
         """
         self.candles = candles
         self.price_error = price_error or self.default_price_error

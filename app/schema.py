@@ -39,7 +39,7 @@ class BalanceItem(Entity):
     blocked: Optional[Decimal]
 
 
-class CandleInterval(str, Enum):
+class Timeframe(str, Enum):
     M1 = '1min'
     M5 = '5min'
     M10 = '10min'

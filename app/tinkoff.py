@@ -7,7 +7,7 @@ import httpx
 from dateutil.relativedelta import relativedelta
 
 from .config import settings
-from .schema import BalanceItem, Candle, CandleInterval, Instrument
+from .schema import BalanceItem, Candle, Instrument, Timeframe
 from .utils import localize_dt
 
 logger = logging.getLogger(__name__)
@@ -26,14 +26,14 @@ class TinkoffClient:
     Documentation: https://tinkoffcreditsystems.github.io/invest-openapi/swagger-ui
     """
     CANDLE_REQUEST_BATCH = {
-        CandleInterval.M1: relativedelta(days=1),
-        CandleInterval.M5: relativedelta(days=1),
-        CandleInterval.M10: relativedelta(days=1),
-        CandleInterval.M30: relativedelta(days=1),
-        CandleInterval.H1: relativedelta(weeks=1),
-        CandleInterval.D1: relativedelta(years=1),
-        CandleInterval.D7: relativedelta(years=2),
-        CandleInterval.D30: relativedelta(years=10),
+        Timeframe.M1: relativedelta(days=1),
+        Timeframe.M5: relativedelta(days=1),
+        Timeframe.M10: relativedelta(days=1),
+        Timeframe.M30: relativedelta(days=1),
+        Timeframe.H1: relativedelta(weeks=1),
+        Timeframe.D1: relativedelta(years=1),
+        Timeframe.D7: relativedelta(years=2),
+        Timeframe.D30: relativedelta(years=10),
     }
 
     def __init__(self, token: str = ''):
@@ -118,9 +118,9 @@ class TinkoffClient:
         return await self._get_instruments('currencies')
 
     async def get_candles(
-        self, figi: str, interval: CandleInterval, start_dt: dt.datetime, end_dt: dt.datetime
+        self, figi: str, timeframe: Timeframe, start_dt: dt.datetime, end_dt: dt.datetime
     ) -> List[Candle]:
-        """Get historic candles for selected instrument, period and interval.
+        """Get historic candles for selected instrument, period and timeframe.
         """
         def make_tz_aware(datetime: dt.datetime) -> str:
             if datetime.tzinfo:
@@ -131,7 +131,7 @@ class TinkoffClient:
         if end_dt < start_dt:
             raise ValueError('End period should be greater than start period')
 
-        batch_size = self.CANDLE_REQUEST_BATCH[interval]
+        batch_size = self.CANDLE_REQUEST_BATCH[timeframe]
         start, end = start_dt, end_dt
         if (start + batch_size) < end:
             end = start + batch_size
@@ -142,7 +142,7 @@ class TinkoffClient:
                 'figi': figi,
                 'from': make_tz_aware(start),
                 'to': make_tz_aware(end),
-                'interval': interval
+                'interval': timeframe,
             })
             candles.extend([Candle(**obj) for obj in response['candles']])
 

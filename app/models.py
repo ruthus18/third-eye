@@ -4,7 +4,7 @@ from typing import Any, Dict, Sequence
 from tortoise import Tortoise, fields, models
 
 from .config import settings
-from .schema import CandleInterval, Currency
+from .schema import Currency, Timeframe
 
 
 async def init_db() -> None:
@@ -56,7 +56,7 @@ class Candle(models.Model):
     id = fields.IntField(pk=True)
     instrument = fields.ForeignKeyField('models.Instrument', related_name='candles')
 
-    interval = fields.CharEnumField(CandleInterval, max_length=6)
+    timeframe = fields.CharEnumField(Timeframe, max_length=6)
 
     time = fields.DatetimeField()
     open = fields.DecimalField(max_digits=8, decimal_places=2)
@@ -66,7 +66,7 @@ class Candle(models.Model):
     volume = fields.IntField(max_digits=8, decimal_places=2)
 
     class Meta:
-        unique_together = (('instrument', 'interval', 'time'), )
+        unique_together = (('instrument', 'timeframe', 'time'), )
 
     def __str__(self) -> str:
         return f'{self.time}'

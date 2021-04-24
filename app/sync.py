@@ -9,7 +9,7 @@ from tortoise import timezone as tz
 
 from . import models
 from .config import settings
-from .schema import CandleInterval, Currency
+from .schema import Currency, Timeframe
 from .tinkoff import TinkoffClient
 
 logger = logging.getLogger(__name__)
@@ -66,11 +66,11 @@ async def init_day_candles(client: TinkoffClient) -> None:
             candle_instances += [
                 models.Candle(
                     instrument_id=figi,
-                    interval=CandleInterval.D1,
+                    timeframe=Timeframe.D1,
                     **candle.dict(),
                 )
                 for candle in await client.get_candles(
-                    figi, interval=CandleInterval.D1, start_dt=start_dt, end_dt=end_dt
+                    figi, timeframe=Timeframe.D1, start_dt=start_dt, end_dt=end_dt
                 )
             ]
             end_dt = start_dt
@@ -145,11 +145,11 @@ async def update_day_candles(client: TinkoffClient) -> None:
             candle_instances += [
                 models.Candle(
                     instrument=stock,
-                    interval=CandleInterval.D1,
+                    timeframe=Timeframe.D1,
                     **candle.dict(),
                 )
                 for candle in await client.get_candles(
-                    stock.figi, interval=CandleInterval.D1, start_dt=start_dt, end_dt=end_dt
+                    stock.figi, timeframe=Timeframe.D1, start_dt=start_dt, end_dt=end_dt
                 )
             ]
 

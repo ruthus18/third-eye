@@ -111,17 +111,17 @@ class StocksViewerPage(Page):
         ticker: str,
         start_date: dt.date,
         end_date: dt.date,
-        timeframe: schema.CandleInterval,
+        timeframe: schema.Timeframe,
     ):
         stock = _await(models.Instrument.get(ticker=ticker))
         start_dt = localize_dt(dt.datetime.combine(start_date, dt.time()))
         end_dt = localize_dt(dt.datetime.combine(end_date, dt.time(23, 59)))
 
-        if timeframe == schema.CandleInterval.D1:
+        if timeframe == schema.Timeframe.D1:
             candles_data = _await(
                 models.Candle.filter(
                     instrument=stock,
-                    interval=schema.CandleInterval.D1,
+                    timeframe=schema.Timeframe.D1,
                 )
                 .filter(time__gte=start_dt, time__lte=end_dt)
                 .values('open', 'close', 'high', 'low', 'volume', 'time')
@@ -129,7 +129,7 @@ class StocksViewerPage(Page):
 
         else:
             candles_data = _await(tinkoff_client.get_candles(
-                figi=stock.figi, interval=timeframe, start_dt=start_dt, end_dt=end_dt
+                figi=stock.figi, timeframe=timeframe, start_dt=start_dt, end_dt=end_dt
             ))
             candles_data = (o.dict() for o in candles_data)
 
@@ -142,7 +142,7 @@ class StocksViewerPage(Page):
         ticker: str,
         candle_start_date: dt.date,
         candle_end_date: dt.date,
-        candle_timeframe: schema.CandleInterval,
+        candle_timeframe: schema.Timeframe,
         sr_start_date: Optional[dt.date] = None,
         sr_end_date: Optional[dt.date] = None,
         sr_significance_threshold: Optional[float] = None,
@@ -154,7 +154,7 @@ class StocksViewerPage(Page):
             sr_candles_df = pd.DataFrame.from_dict(_await(
                 models.Candle.filter(
                     instrument__ticker=ticker,
-                    interval=schema.CandleInterval.D1,
+                    timeframe=schema.Timeframe.D1,
                 )
                 .filter(
                     time__gte=localize_dt(dt.datetime.combine(sr_start_date, dt.time())),
@@ -192,8 +192,8 @@ class StocksViewerPage(Page):
         self.candle_end_date = st.sidebar.date_input('End Date', value=self.default_candle_end_date)
         self.candle_timeframe = st.sidebar.selectbox(
             'Timeframe',
-            list(ch.value for ch in schema.CandleInterval),
-            list(ch.value for ch in schema.CandleInterval).index('day')
+            list(ch.value for ch in schema.Timeframe),
+            list(ch.value for ch in schema.Timeframe).index('day')
         )
 
         self.show_hover = st.sidebar.checkbox('Show Hover', value=False)
