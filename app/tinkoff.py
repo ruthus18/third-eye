@@ -4,6 +4,7 @@ import logging
 from typing import Any, Dict, List, Literal, Optional
 
 import httpx
+from dateutil.relativedelta import relativedelta
 
 from .config import settings
 from .schema import BalanceItem, Candle, CandleInterval, Instrument
@@ -24,6 +25,16 @@ class TinkoffClient:
 
     Documentation: https://tinkoffcreditsystems.github.io/invest-openapi/swagger-ui
     """
+    CANDLE_REQUEST_BATCH = {
+        CandleInterval.M1: relativedelta(days=1),
+        CandleInterval.M5: relativedelta(days=1),
+        CandleInterval.M10: relativedelta(days=1),
+        CandleInterval.M30: relativedelta(days=1),
+        CandleInterval.H1: relativedelta(weeks=1),
+        CandleInterval.D1: relativedelta(years=1),
+        CandleInterval.D7: relativedelta(years=2),
+        CandleInterval.D30: relativedelta(years=10),
+    }
 
     def __init__(self, token: str = ''):
         token = token or settings.TINKOFF_TOKEN.get_secret_value()
@@ -117,10 +128,30 @@ class TinkoffClient:
 
             return localize_dt(datetime).isoformat()
 
-        response = await self._request('GET', 'market/candles', params={
-            'figi': figi,
-            'from': make_tz_aware(start_dt),
-            'to': make_tz_aware(end_dt),
-            'interval': interval
-        })
-        return [Candle(**obj) for obj in response['candles']]
+        if end_dt < start_dt:
+            raise ValueError('End period should be greater than start period')
+
+        batch_size = self.CANDLE_REQUEST_BATCH[interval]
+        start, end = start_dt, end_dt
+        if (start + batch_size) < end:
+            end = start + batch_size
+
+        candles = []
+        while True:
+            response = await self._request('GET', 'market/candles', params={
+                'figi': figi,
+                'from': make_tz_aware(start),
+                'to': make_tz_aware(end),
+                'interval': interval
+            })
+            candles.extend([Candle(**obj) for obj in response['candles']])
+
+            if end == end_dt:
+                break
+
+            start = end
+            end += batch_size
+            if end > end_dt:
+                end = end_dt
+
+        return candles

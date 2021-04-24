@@ -160,7 +160,7 @@ async def update_day_candles(client: TinkoffClient) -> None:
         logger.info('Uploaded %s candles for %s', len(candle_instances), stock.ticker)
 
     if len(stocks) > 0:
-        logger.info('Init candles for %s stocks', len(stocks))
+        logger.info('Updated candles for %s stocks', len(stocks))
 
 
 async def main() -> None:

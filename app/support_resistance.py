@@ -38,6 +38,7 @@ class SupportResistanceSearch:
 
     @property
     def default_price_error(self) -> float:
+        # Define price error as 1/2 of volatility
         return np.mean(self.candles.high - self.candles.low) * 0.5  # type: ignore
 
     def _divide_to_batches(self, batches_num: int = 1) -> tp.List[pd.DataFrame]:
