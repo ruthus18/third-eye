@@ -1,7 +1,7 @@
 import datetime as dt
 from decimal import Decimal
 from enum import Enum
-from typing import Optional
+from typing import List, Optional
 
 from pydantic import BaseModel, Field, validator
 
@@ -51,6 +51,10 @@ class Timeframe(str, Enum):
 
     def __str__(self) -> str:
         return self.value
+
+    @classmethod
+    def as_list(cls) -> List[str]:
+        return list(ch.value for ch in cls)
 
 
 class Candle(Entity):

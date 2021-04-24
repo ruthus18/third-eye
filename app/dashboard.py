@@ -13,7 +13,8 @@ from cachetools.func import ttl_cache
 
 from app.tinkoff import TinkoffClient
 
-from . import graphs, models, schema
+from . import graphs, models
+from .schema import Timeframe
 from .support_resistance import SupportResistanceSearch
 from .utils import localize_dt
 
@@ -105,33 +106,37 @@ class StocksViewerPage(Page):
 
         return f"{ticker} ({self.stocks_choices[ticker]})"
 
-    @staticmethod
+    @classmethod
     @ttl_cache(ttl=600)
+    def download_candles(cls, figi: str, start_dt: dt.datetime, end_dt: dt.datetime, timeframe: Timeframe):
+        return _await(tinkoff_client.get_candles(
+            figi=figi, timeframe=timeframe, start_dt=start_dt, end_dt=end_dt
+        ))
+
+    @classmethod
+    @st.cache(allow_output_mutation=True)
     def get_candles_df(
+        cls,
         ticker: str,
         start_date: dt.date,
         end_date: dt.date,
-        timeframe: schema.Timeframe,
+        timeframe: Timeframe,
     ):
         stock = _await(models.Instrument.get(ticker=ticker))
         start_dt = localize_dt(dt.datetime.combine(start_date, dt.time()))
         end_dt = localize_dt(dt.datetime.combine(end_date, dt.time(23, 59)))
 
-        if timeframe == schema.Timeframe.D1:
+        if timeframe == Timeframe.D1:
             candles_data = _await(
                 models.Candle.filter(
                     instrument=stock,
-                    timeframe=schema.Timeframe.D1,
+                    timeframe=Timeframe.D1,
                 )
                 .filter(time__gte=start_dt, time__lte=end_dt)
                 .values('open', 'close', 'high', 'low', 'volume', 'time')
             )
-
         else:
-            candles_data = _await(tinkoff_client.get_candles(
-                figi=stock.figi, timeframe=timeframe, start_dt=start_dt, end_dt=end_dt
-            ))
-            candles_data = (o.dict() for o in candles_data)
+            candles_data = (o.dict() for o in cls.download_candles(stock.figi, start_dt, end_dt, timeframe))
 
         return pd.DataFrame.from_dict(candles_data)
 
@@ -142,7 +147,7 @@ class StocksViewerPage(Page):
         ticker: str,
         candle_start_date: dt.date,
         candle_end_date: dt.date,
-        candle_timeframe: schema.Timeframe,
+        candle_timeframe: Timeframe,
         sr_start_date: Optional[dt.date] = None,
         sr_end_date: Optional[dt.date] = None,
         sr_significance_threshold: Optional[float] = None,
@@ -151,17 +156,8 @@ class StocksViewerPage(Page):
         graph = graphs.get_candles_graph(ticker, candles_df)
 
         if sr_start_date and sr_end_date:
-            sr_candles_df = pd.DataFrame.from_dict(_await(
-                models.Candle.filter(
-                    instrument__ticker=ticker,
-                    timeframe=schema.Timeframe.D1,
-                )
-                .filter(
-                    time__gte=localize_dt(dt.datetime.combine(sr_start_date, dt.time())),
-                    time__lte=localize_dt(dt.datetime.combine(sr_end_date, dt.time(23, 59))),
-                )
-                .values('open', 'close', 'high', 'low', 'volume', 'time')
-            ))
+            sr_candles_df = cls.get_candles_df(ticker, sr_start_date, sr_end_date, Timeframe.D1)
+
             sr_levels = SupportResistanceSearch(sr_candles_df).find_levels(Decimal(sr_significance_threshold))
             for _, level in sr_levels.iterrows():
                 graphs.draw_line(
@@ -187,15 +183,13 @@ class StocksViewerPage(Page):
             [EMPTY_CHOICE, *self.stocks_choices.keys()],
             format_func=self.format_stocks_selectbox
         )
-
         self.candle_start_date = st.sidebar.date_input('Start Date', value=self.default_candle_start_date)
         self.candle_end_date = st.sidebar.date_input('End Date', value=self.default_candle_end_date)
         self.candle_timeframe = st.sidebar.selectbox(
             'Timeframe',
-            list(ch.value for ch in schema.Timeframe),
-            list(ch.value for ch in schema.Timeframe).index('day')
+            Timeframe.as_list(),
+            Timeframe.as_list().index(Timeframe.D1),
         )
-
         self.show_hover = st.sidebar.checkbox('Show Hover', value=False)
 
         st.sidebar.markdown('---')
