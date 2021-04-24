@@ -1,0 +1,4 @@
+* (dashboard) Dates selectbox should use time 04:00 instead of 23:59
+* (dashboard) Getting external data -> TTLCache and separate method
+* (graphs) Exclude date breaks from candle graph ( https://stackoverflow.com/questions/61346100/plotly-how-to-style-a-plotly-figure-so-that-it-doesnt-display-gaps-for-missing )
+* (candles) Move out work with candles in separate module

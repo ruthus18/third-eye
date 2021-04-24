@@ -70,13 +70,15 @@ class StocksViewerPage(Page):
         self.candle_start_date = None
         self.candle_end_date = None
 
+        self.ticker = None
+        self.show_hover = None
+
         self.show_sr = None
         self.sr_start_date = None
         self.sr_end_date = None
         self.sr_significance_threshold = None
 
-        self.ticker = None
-        self.show_hover = None
+        self.show_macd = None
 
         self._graph = None
 
@@ -142,6 +144,18 @@ class StocksViewerPage(Page):
 
     @classmethod
     @st.cache(allow_output_mutation=True)
+    def get_macd_graph(cls, candles: pd.DataFrame):
+        ema_long = candles.close.ewm(span=26, adjust=False).mean()
+        ema_short = candles.close.ewm(span=12, adjust=False).mean()
+        macd = ema_short - ema_long
+
+        signal_ema = macd.ewm(span=9, adjust=False).mean()
+        macd_histogram = macd - signal_ema
+
+        return go.Bar(x=candles.time, y=macd_histogram, name='MACD(26,12,9)')
+
+    @classmethod
+    @st.cache(allow_output_mutation=True)
     def get_candles_graph(
         cls,
         ticker: str,
@@ -151,9 +165,12 @@ class StocksViewerPage(Page):
         sr_start_date: Optional[dt.date] = None,
         sr_end_date: Optional[dt.date] = None,
         sr_significance_threshold: Optional[float] = None,
+        macd: bool = False,
     ):
         candles_df = cls.get_candles_df(ticker, candle_start_date, candle_end_date, candle_timeframe)
-        graph = graphs.get_candles_graph(ticker, candles_df)
+
+        macd_graph = cls.get_macd_graph(candles_df) if macd else None
+        graph = graphs.get_candles_graph(ticker, candles_df, macd_graph)
 
         if sr_start_date and sr_end_date:
             sr_candles_df = cls.get_candles_df(ticker, sr_start_date, sr_end_date, Timeframe.D1)
@@ -199,6 +216,10 @@ class StocksViewerPage(Page):
         self.sr_end_date = st.sidebar.date_input('S/R End Date', value=self.default_sr_end_date)
         self.sr_significance_threshold = st.sidebar.number_input('Significnce Threshold', value=0.25)
 
+        st.sidebar.markdown('---')
+        st.sidebar.text('Indicators')
+        self.show_macd = st.sidebar.checkbox('Show MACD(26, 12, 9)', value=False)
+
     def show(self):
         self.show_sidebar()
 
@@ -210,6 +231,7 @@ class StocksViewerPage(Page):
                 'candle_start_date': self.candle_start_date,
                 'candle_end_date': self.candle_end_date,
                 'candle_timeframe': self.candle_timeframe,
+                'macd': self.show_macd,
             }
             if self.show_sr_levels:
                 candle_kwargs = {

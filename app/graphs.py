@@ -1,11 +1,11 @@
-from typing import Any
+from typing import Any, Optional
 
 import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
 
-def get_candles_graph(ticker: str, candles: pd.DataFrame) -> go.Figure:
+def get_candles_graph(ticker: str, candles: pd.DataFrame, extra_graph: Optional[go.Figure] = None) -> go.Figure:
     fig = make_subplots(rows=2, cols=1, row_heights=[0.8, 0.15], vertical_spacing=0.05)
 
     fig.add_trace(
@@ -24,15 +24,16 @@ def get_candles_graph(ticker: str, candles: pd.DataFrame) -> go.Figure:
         ),
         row=1, col=1,
     )
-    fig.add_trace(
-        go.Bar(
+    if extra_graph is not None:
+        second_graph = extra_graph
+    else:
+        second_graph = go.Bar(
             x=candles.time,
             y=candles.volume,
             marker_color='#7658e0',
             name='Volume',
-        ),
-        row=2, col=1,
-    )
+        )
+    fig.add_trace(second_graph, row=2, col=1)
     fig.update_layout(
         {'plot_bgcolor': '#ffffff', 'paper_bgcolor': '#ffffff', 'legend_orientation': "h"},
         legend=dict(y=1, x=0),
